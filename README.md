@@ -2,6 +2,8 @@
 
 **Real-time visibility into every AI API call your app makes — cost, speed, errors, and usage, all in one dashboard.**
 
+🔗 **[Live demo](https://llm-observatory-one.vercel.app)** · [API docs](https://llm-observatory-lmt9.onrender.com/docs)
+
 <!-- Replace with your own screenshot: docs/dashboard.png -->
 ![LLM Observatory Dashboard](docs/dashboard.png)
 
@@ -162,7 +164,7 @@ const result = await obs.trace({
 # 1. Import the repo in Vercel
 # 2. Set Root Directory to: frontend
 # 3. Add environment variable:
-NEXT_PUBLIC_API_URL=https://your-service.onrender.com
+NEXT_PUBLIC_API_URL=https://llm-observatory-lmt9.onrender.com
 # 4. Deploy
 ```
 
