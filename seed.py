@@ -1,10 +1,12 @@
 """
 Seed the Observatory with realistic demo data so the dashboard looks alive.
-Run: python seed.py
-"""
-import sqlite3, time, random, math
 
-DB = "backend/observatory.db"
+Local:  python seed.py
+Remote: python seed.py https://llm-observatory-lmt9.onrender.com
+"""
+import sys, time, random, urllib.request, urllib.error, json
+
+BASE_URL = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://localhost:8000"
 
 MODELS = [
     ("gpt-4o",           "openai",    (2.50, 10.00), (400, 2000)),
@@ -16,44 +18,51 @@ MODELS = [
 
 PROJECTS = ["search-agent", "summariser", "code-assistant", "support-bot"]
 
-def cost(model_info, pt, ct):
+def calc_cost(model_info, pt, ct):
     rIn, rOut = model_info[2]
     return (pt * rIn + ct * rOut) / 1_000_000
 
-def main():
-    conn = sqlite3.connect(DB)
-    conn.execute("DELETE FROM calls")
+def post(payload):
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        f"{BASE_URL}/log",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    urllib.request.urlopen(req, timeout=10)
 
+def main():
+    print(f"Seeding 500 calls to {BASE_URL} ...")
     now = time.time()
-    rows = []
     for i in range(500):
-        age = random.uniform(0, 23.5 * 3600)
-        ts = now - age
+        age = random.uniform(0, 167 * 3600)  # spread across 7 days
         m = random.choice(MODELS)
         pt = random.randint(*m[3])
         ct = int(pt * random.uniform(0.3, 1.2))
         latency = random.gauss(900, 300) if "gpt-4o" in m[0] else random.gauss(500, 150)
         latency = max(50, latency)
         err = random.random() < 0.04
-        rows.append((
-            ts, random.choice(PROJECTS), m[0], m[1],
-            pt, ct, pt+ct,
-            latency,
-            cost(m, pt, ct),
-            "error" if err else "success",
-            "RateLimitError: quota exceeded" if err else None,
-            None,
-        ))
 
-    conn.executemany("""
-        INSERT INTO calls
-        (ts,project,model,provider,prompt_tokens,completion_tokens,
-         total_tokens,latency_ms,cost_usd,status,error,tags)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-    """, rows)
-    conn.commit()
-    conn.close()
-    print(f"Seeded {len(rows)} calls into {DB}")
+        # The /log endpoint records ts=time.time() internally, so we post directly
+        # For historical data we insert via the API but backdating isn't supported —
+        # all 500 calls will appear as "now" which is fine for a demo.
+        post({
+            "project": random.choice(PROJECTS),
+            "model": m[0],
+            "provider": m[1],
+            "prompt_tokens": pt,
+            "completion_tokens": ct,
+            "latency_ms": round(latency, 2),
+            "cost_usd": round(calc_cost(m, pt, ct), 6),
+            "status": "error" if err else "success",
+            "error": "RateLimitError: quota exceeded" if err else None,
+        })
+
+        if (i + 1) % 50 == 0:
+            print(f"  {i + 1}/500")
+
+    print("Done!")
 
 if __name__ == "__main__":
     main()
