@@ -62,7 +62,7 @@ LLM Observatory is a lightweight, self-hosted observability dashboard. You wrap 
 | Backend | FastAPI + SQLite |
 | Frontend | Next.js 14 + TypeScript + Recharts + Tailwind |
 | SDK | Python + TypeScript |
-| Deploy | Vercel (frontend) + Railway (backend) |
+| Deploy | Vercel (frontend) + Render (backend) |
 
 ---
 
@@ -146,13 +146,14 @@ const result = await obs.trace({
 
 ## Deployment
 
-### Backend → Railway
+### Backend → Render
 
 ```bash
-# railway.toml is already configured in the repo root
-# 1. Connect your GitHub repo in Railway
-# 2. Set Root Directory to: backend
-# 3. Deploy — Railway picks up the start command automatically
+# 1. Connect your GitHub repo on render.com → New Web Service
+# 2. Root Directory: backend
+# 3. Build Command: pip install -r requirements.txt
+# 4. Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+# 5. Instance Type: Free → Deploy
 ```
 
 ### Frontend → Vercel
@@ -161,11 +162,11 @@ const result = await obs.trace({
 # 1. Import the repo in Vercel
 # 2. Set Root Directory to: frontend
 # 3. Add environment variable:
-NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app
+NEXT_PUBLIC_API_URL=https://your-service.onrender.com
 # 4. Deploy
 ```
 
-> **Note on persistence:** SQLite resets on Railway redeploy. Run `python seed.py` once after deploying the backend to populate demo data. For production use, mount a Railway Volume at `/app` and the DB will survive redeploys.
+> **Note on persistence:** SQLite resets on Render redeploy (free tier has no persistent disk). Run `python seed.py` once after deploying to populate demo data. Free instances also spin down after 15min inactivity — first request may take ~30s to cold start.
 
 ---
 
