@@ -128,7 +128,7 @@ export default function Dashboard() {
   }, [refresh])
 
   const s = stats?.summary
-  const errorRate = s && s.total_calls > 0 ? ((s.errors / s.total_calls) * 100).toFixed(1) : '0.0'
+  const errorRate = s && s.total_calls > 0 ? (((s.errors ?? 0) / s.total_calls) * 100).toFixed(1) : '0.0'
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>

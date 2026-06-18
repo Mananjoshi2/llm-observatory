@@ -108,11 +108,11 @@ def get_stats(
     with get_db() as conn:
         row = conn.execute(f"""
             SELECT
-                COUNT(*)                        AS total_calls,
-                SUM(total_tokens)               AS total_tokens,
-                SUM(cost_usd)                   AS total_cost,
-                AVG(latency_ms)                 AS avg_latency,
-                SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) AS errors
+                COUNT(*)                             AS total_calls,
+                COALESCE(SUM(total_tokens), 0)       AS total_tokens,
+                COALESCE(SUM(cost_usd), 0)           AS total_cost,
+                COALESCE(AVG(latency_ms), 0)         AS avg_latency,
+                COALESCE(SUM(CASE WHEN status='error' THEN 1 ELSE 0 END), 0) AS errors
             FROM calls {where}
         """, params).fetchone()
 
