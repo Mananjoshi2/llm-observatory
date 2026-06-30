@@ -32,11 +32,46 @@ def post(payload):
     )
     urllib.request.urlopen(req, timeout=10)
 
+def seed_demo_data(db_path="observatory.db", n=500):
+    """Insert n synthetic calls directly into the SQLite DB."""
+    import sqlite3
+    now = time.time()
+    rows = []
+    for _ in range(n):
+        age = random.uniform(0, 167 * 3600)  # spread across ~7 days
+        ts = now - age
+        m = random.choice(MODELS)
+        pt = random.randint(*m[3])
+        ct = int(pt * random.uniform(0.3, 1.2))
+        latency = random.gauss(900, 300) if "gpt-4o" in m[0] else random.gauss(500, 150)
+        latency = max(50, latency)
+        err = random.random() < 0.04
+        rows.append((
+            ts,
+            random.choice(PROJECTS),
+            m[0], m[1],
+            pt, ct, pt + ct,
+            round(latency, 2),
+            round(calc_cost(m, pt, ct), 6),
+            "error" if err else "success",
+            "RateLimitError: quota exceeded" if err else None,
+            None,
+        ))
+    with sqlite3.connect(db_path) as conn:
+        conn.executemany(
+            """INSERT INTO calls
+               (ts, project, model, provider, prompt_tokens, completion_tokens,
+                total_tokens, latency_ms, cost_usd, status, error, tags)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            rows,
+        )
+        conn.commit()
+    print(f"Seeded {n} demo calls into {db_path}.")
+
 def main():
     print(f"Seeding 500 calls to {BASE_URL} ...")
     now = time.time()
     for i in range(500):
-        age = random.uniform(0, 167 * 3600)  # spread across 7 days
         m = random.choice(MODELS)
         pt = random.randint(*m[3])
         ct = int(pt * random.uniform(0.3, 1.2))
@@ -44,9 +79,6 @@ def main():
         latency = max(50, latency)
         err = random.random() < 0.04
 
-        # The /log endpoint records ts=time.time() internally, so we post directly
-        # For historical data we insert via the API but backdating isn't supported —
-        # all 500 calls will appear as "now" which is fine for a demo.
         post({
             "project": random.choice(PROJECTS),
             "model": m[0],

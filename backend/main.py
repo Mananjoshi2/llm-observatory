@@ -6,9 +6,23 @@ import sqlite3
 import time
 import json
 from datetime import datetime, timedelta
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 
-app = FastAPI(title="LLM Observatory API")
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from seed import seed_demo_data
+
+DB_PATH = "observatory.db"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute("SELECT COUNT(*) FROM calls").fetchone()
+    if row[0] == 0:
+        seed_demo_data(db_path=DB_PATH)
+    yield
+
+app = FastAPI(title="LLM Observatory API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,8 +30,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-DB_PATH = "observatory.db"
 
 # ---------------------------------------------------------------------------
 # DB setup
