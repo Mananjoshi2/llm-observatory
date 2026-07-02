@@ -15,3 +15,6 @@ node_modules/
 
 # OS
 .DS_Store
+
+# IDE / Claude Code
+.claude/
